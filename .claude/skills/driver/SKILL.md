@@ -1,5 +1,5 @@
 ---
-description: "Driver agent prompt building, SDK vs API mode, how evaluator feedback flows into the next iteration"
+description: "Driver agent prompt building, how evaluator feedback flows into the next iteration"
 when_to_use: "When modifying the driver agent, changing how prompts are built, or working on driver/driver.py or driver/prompt_builder.py"
 user-invocable: true
 ---
@@ -8,25 +8,16 @@ user-invocable: true
 
 The driver agent reads evaluation feedback and proposes the next change to the work product. It is the agent that actually edits files.
 
-## Two modes (driver/driver.py)
+## Execution (driver/driver.py)
 
-### SDK mode: `run_driver_sdk()`
-- Full Claude Code session via `Claude.query()`
+### `run_driver_sdk()`
+- Full Claude Code session via `claude_query()`
 - `ClaudeCodeOptions`: model, cwd=workspace, allowed_tools, permission_mode="bypassPermissions"
 - Can use tools: Read, Edit, Write, Glob, Grep, Bash (defaults)
 - Can invoke skills if `skill_dirs` provided (auto-adds "Skill" to allowed_tools, passes dirs as `add_dirs`)
 - Can use MCPs if `mcp_servers` provided (converted via `_build_mcp_servers()`)
 - `max_turns` limits agent turns
 - Captures final text message as description of change
-- Best for: code editing, complex file manipulation
-
-### API mode: `run_driver_api()`
-- Single `client.messages.create()` call
-- System prompt instructs agent to return `DESCRIPTION:` line + `FILE:` blocks
-- `_extract_description()` parses the description line
-- `_apply_file_outputs()` parses `FILE: <name>\n```\n<content>\n```\n` blocks
-- Only writes to files matching `program.editable_files` patterns (safety check)
-- Best for: text content editing where no tools needed
 
 ## Prompt structure (driver/prompt_builder.py)
 
@@ -57,10 +48,8 @@ Iter    Score  Status    Description
 ### 5. Feedback from Last Evaluation
 Per-agent breakdown sorted by weight (highest first):
 ```
-## national-security-language (score: 7.5, weight: 0.25)
-**Reasoning:** The revised executive summary demonstrates strong...
-**Strengths:** Clear threat framing; Appropriate terminology
-**Weaknesses:** Section 3 lacks specific policy recommendations
+**national-security-language** (7.5, w=0.25): The revised executive summary demonstrates strong...
+  → Fix: Section 3 lacks specific policy recommendations
 ```
 
 This is what makes the loop work — the driver sees exactly which evaluator scored what, why, and what they want improved. It can strategically target the highest-weighted evaluator's weaknesses.

@@ -4,7 +4,7 @@ Autonomous optimization framework. Iteratively improves a work product by having
 
 ## Stack
 
-Python 3.10+. Pydantic models for config. Typer CLI. Rich terminal UI. Anthropic API for evaluators. Claude Code SDK for driver and SDK-mode evaluators. YAML configs for programs, agents, and panels.
+Python 3.10+. Pydantic models for config. Typer CLI. Rich terminal UI. Claude Code SDK for driver and evaluator agents. YAML configs for programs, agents, and panels.
 
 ## Package layout
 
@@ -43,14 +43,14 @@ Project-local `.autoforge/<kind>/` > user-global `~/.autoforge/library/<kind>/` 
 - `--skill-dir` adds skill directories to all agents at runtime
 - All CLI flags are additive — they merge with project.yaml and agent configs, never replace
 - Project state lives in `.autoforge/` (gitignored), never pollutes framework repo
-- Evaluator agents default to API mode (single-turn, cheap). SDK mode is opt-in per agent for tools/MCPs/skills.
+- All agents (driver + evaluators) run via the Claude Code SDK with tools, MCPs, and skills support
 
 ## Skills for deeper context
 
 - `/programs` — program YAML schema, creating new programs, template files
-- `/agents-panels` — agent YAML schema, panel composition, weights, SDK vs API mode, skills/MCPs
+- `/agents-panels` — agent YAML schema, panel composition, weights, skills/MCPs
 - `/evaluation` — how scoring works, agent_runner internals, objective vs panel evaluation
-- `/driver` — driver agent prompt building, SDK vs API mode, how feedback flows
+- `/driver` — driver agent prompt building, how feedback flows
 - `/project-setup` — project init, state management, git operations, iteration history
 - `/objective-optimization` — ML training, benchmarks, or anything with a numeric metric: the run→extract→compare pipeline, crash handling, writing new objective programs
 - `/create-agent` — interactive workflow: asks questions, generates agent YAML with system prompt and rubric

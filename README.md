@@ -133,7 +133,6 @@ Create a custom evaluator agent that uses your company's knowledge base skill:
 name: product-accuracy
 description: Verifies claims against internal product knowledge base
 model: sonnet
-mode: sdk
 max_turns: 8
 
 skill_dirs:
@@ -207,14 +206,13 @@ EOF
 autoforge run -n 20 -m sonnet
 ```
 
-The `product-accuracy` agent runs in SDK mode — it gets a full Claude Code session where it can invoke your knowledge base skill, read docs, and verify claims before scoring. The other agents run in API mode (fast, single-turn). All 5 run in parallel each iteration.
+The `product-accuracy` agent gets a full Claude Code session where it can invoke your knowledge base skill, read docs, and verify claims before scoring. All 5 agents run in parallel each iteration.
 
 You could do the same thing with an MCP server instead of a skill. For example, if your product data lives in a database with an MCP interface:
 
 ```yaml
 # .autoforge/agents/product-accuracy.yaml
 name: product-accuracy
-mode: sdk
 model: sonnet
 tools: [Read, Grep]
 mcp_servers:
@@ -255,7 +253,7 @@ objective:
   timeout_seconds: 600
 ```
 
-The driver agent gets a full Claude Code session (SDK mode) so it can read, reason about, and edit the training code. Everything in `train.py` is fair game — model architecture, optimizer hyperparameters, batch size, scheduling. `prepare.py` is read-only.
+The driver agent gets a full Claude Code session so it can read, reason about, and edit the training code. Everything in `train.py` is fair game — model architecture, optimizer hyperparameters, batch size, scheduling. `prepare.py` is read-only.
 
 Each iteration takes ~5.5 minutes (5 min training + overhead). You can leave it running overnight and wake up to a log of experiments.
 
@@ -275,7 +273,6 @@ objective:
   direction: maximize
   timeout_seconds: 120
 driver_model: sonnet
-driver_mode: sdk
 driver_instructions: |
   Optimize solution.py to maximize the benchmark score.
   Read problem.md for the problem description.
@@ -303,7 +300,7 @@ src/autoforge/
     agent_runner.py      # Run evaluator agents in parallel
     scoring.py           # Weighted consensus math
   driver/
-    driver.py            # Driver agent (Claude Code SDK or raw API)
+    driver.py            # Driver agent (Claude Code SDK)
     prompt_builder.py    # Build driver prompt from state + feedback
   ui/
     console.py           # Rich console
@@ -348,13 +345,12 @@ objective:
 
 ### Agents
 
-Each evaluator agent has a persona, model, and scoring rubric.
+Each evaluator agent has a persona, model, and scoring rubric. All agents run via the Claude Code SDK and can use tools, MCPs, and skills.
 
 ```yaml
 name: formal-writing
 description: Expert in formal, professional writing quality
 model: haiku
-mode: api           # "api" (single-turn, fast) or "sdk" (multi-turn, tools)
 system_prompt: |
   You are an expert in formal and professional writing...
 scoring_rubric: |
@@ -363,16 +359,15 @@ scoring_rubric: |
   9-10: Publication-ready
 ```
 
-SDK-mode agents can use tools, MCPs, and skills:
+Agents that need external knowledge can configure tools, skills, and MCPs:
 
 ```yaml
-name: netrise-expert
+name: product-expert
 model: sonnet
-mode: sdk
 max_turns: 8
 tools: [Read, Grep, Skill, WebSearch]
-skill_dirs: [~/repos/netrise-knowledge-claude-skills]
-skills: [netrise-knowledge-base]
+skill_dirs: [~/repos/company-knowledge-base]
+skills: [product-knowledge]
 mcp_servers:
   browser:
     command: npx
@@ -481,15 +476,6 @@ The `eval` command accepts the same flags for one-shot testing:
 autoforge eval -c "Written for a government audience" -C policy-context.md
 autoforge eval --agent formal-writing -f content.md -c "This is a policy memo"
 ```
-
-## Agent execution modes
-
-| Mode | Evaluator | Driver | Multi-turn | Tools/MCPs/Skills |
-|------|-----------|-----------|------------|-------------------|
-| `api` | Single API call, forced structured output | Content in prompt, edits in response | No | No (skill knowledge injected into prompt) |
-| `sdk` | Full Claude Code session | Full Claude Code session | Yes | Yes |
-
-API mode is fast and cheap (haiku). SDK mode is powerful (sonnet/opus) — agents can read files, search the web, invoke skills, and use MCPs before making their decision.
 
 ## License
 

@@ -65,7 +65,6 @@ def sample_program_dir(tmp_dir):
         "eval_mode": "panel",
         "default_panel": "test-panel",
         "driver_model": "haiku",
-        "driver_mode": "api",
         "driver_instructions": "Improve the content based on feedback.",
     }
     (prog_dir / "program.yaml").write_text(yaml.dump(data))
@@ -93,7 +92,6 @@ def sample_objective_program_dir(tmp_dir):
             "timeout_seconds": 10,
         },
         "driver_model": "haiku",
-        "driver_mode": "api",
         "driver_instructions": "Improve the code.",
     }
     (prog_dir / "program.yaml").write_text(yaml.dump(data))

@@ -29,6 +29,7 @@ class IterationRecord(BaseModel):
     score: float
     status: str  # "baseline", "keep", "discard", "crash"
     description: str = ""
+    diff: str = ""  # unified diff of changes made this iteration
     duration_seconds: float = 0.0
 
     # Panel evaluation details
@@ -63,6 +64,7 @@ class ProjectState(BaseModel):
         status: str,
         description: str = "",
         commit_hash: str | None = None,
+        diff: str = "",
         duration_seconds: float = 0.0,
         agent_scores: list[AgentScore] | None = None,
         raw_metrics: dict[str, Any] | None = None,
@@ -75,6 +77,7 @@ class ProjectState(BaseModel):
             score=score,
             status=status,
             description=description,
+            diff=diff,
             duration_seconds=duration_seconds,
             agent_scores=agent_scores,
             raw_metrics=raw_metrics,

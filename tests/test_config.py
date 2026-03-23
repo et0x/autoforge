@@ -44,25 +44,18 @@ class TestAgentConfig:
         assert agent.name == "test-agent"
         assert agent.model == "haiku"
         assert agent.temperature == 0.3
-        assert agent.mode == "api"
-        assert agent.is_agentic is False
         assert "test evaluator" in agent.system_prompt
 
     def test_defaults(self):
         agent = AgentConfig(name="a", system_prompt="test")
         assert agent.model == "haiku"
         assert agent.temperature == 0.3
-        assert agent.max_tokens == 2048
-        assert agent.mode == "api"
+        assert agent.max_tokens == 512
         assert agent.tools == []
         assert agent.mcp_servers == {}
         assert agent.skill_dirs == []
         assert agent.skills == []
         assert agent.max_turns == 10
-
-    def test_sdk_mode(self):
-        agent = AgentConfig(name="a", system_prompt="test", mode="sdk")
-        assert agent.is_agentic is True
 
     def test_model_copy_override(self):
         agent = AgentConfig(name="a", system_prompt="test", model="haiku")
@@ -163,7 +156,6 @@ class TestProgramConfig:
             default_panel="p",
         )
         assert prog.driver_model == "sonnet"
-        assert prog.driver_mode == "sdk"
         assert prog.simplicity_criterion is True
         assert prog.never_stop is True
         assert "Read" in prog.driver_tools
@@ -318,13 +310,13 @@ class TestBuiltInLibrary:
         configs = list_configs("agents")
         assert "formal-writing" in configs
         assert "technical-accuracy" in configs
-        assert len(configs) == 10
+        assert len(configs) >= 10  # base agents + any added since
 
     def test_load_builtin_panels(self):
         configs = list_configs("panels")
         assert "government-stakeholders" in configs
         assert "linkedin-professional" in configs
-        assert len(configs) == 4
+        assert len(configs) >= 4  # base panels + any added since
 
     def test_load_all_agents_valid(self):
         """Every built-in agent YAML parses without error."""

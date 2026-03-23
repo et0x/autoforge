@@ -54,12 +54,9 @@ def build_driver_prompt(
         if last.agent_scores:
             feedback_lines = ["# Feedback from Last Evaluation", ""]
             for s in sorted(last.agent_scores, key=lambda x: x.weight, reverse=True):
-                feedback_lines.append(f"## {s.agent} (score: {s.score:.1f}, weight: {s.weight:.2f})")
-                feedback_lines.append(f"**Reasoning:** {s.reasoning}")
-                if s.strengths:
-                    feedback_lines.append("**Strengths:** " + "; ".join(s.strengths))
+                feedback_lines.append(f"**{s.agent}** ({s.score:.1f}, w={s.weight:.2f}): {s.reasoning}")
                 if s.weaknesses:
-                    feedback_lines.append("**Weaknesses:** " + "; ".join(s.weaknesses))
+                    feedback_lines.append(f"  → Fix: {s.weaknesses[0]}")
                 feedback_lines.append("")
             parts.append("\n".join(feedback_lines))
 

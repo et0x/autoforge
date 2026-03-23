@@ -14,7 +14,6 @@ eval_mode: panel
 default_panel: linkedin-professional
 
 driver_model: sonnet
-driver_mode: sdk
 
 driver_instructions: |
   You are optimizing written content. Your goal is to improve the score

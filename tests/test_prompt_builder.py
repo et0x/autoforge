@@ -87,7 +87,7 @@ class TestBuildDriverPrompt:
         assert "Good structure" in prompt
         assert "Wordy" in prompt
         assert "Weak opening" in prompt
-        assert "weight: 0.50" in prompt
+        assert "w=0.50" in prompt
 
     def test_task_instructions(self, program, state, workspace):
         prompt = build_driver_prompt(program, state, [], workspace)

@@ -22,7 +22,6 @@ objective:
   setup_command: "test -d ~/.cache/autoforge || uv run prepare.py"
 
 driver_model: sonnet
-driver_mode: sdk
 
 driver_instructions: |
   You are an autonomous ML researcher. Your goal is to minimize val_bpb

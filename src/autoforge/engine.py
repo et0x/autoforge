@@ -7,8 +7,6 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from anthropic import AsyncAnthropic
-
 from autoforge.config import (
     EvalMode,
     PanelConfig,
@@ -18,7 +16,7 @@ from autoforge.config import (
 from autoforge.eval.objective import run_objective_eval, run_setup
 from autoforge.eval.panel import PanelEvaluator
 from autoforge.git_ops import GitOps
-from autoforge.driver.driver import run_driver_sdk, run_driver_api
+from autoforge.driver.driver import run_driver_sdk
 from autoforge.driver.prompt_builder import build_driver_prompt
 from autoforge.state import AgentScore, ProjectState
 from autoforge.ui.progress import ProgressUI
@@ -33,7 +31,6 @@ class OptimizationEngine:
         project: ProjectConfig,
         program: ProgramConfig,
         ui: ProgressUI,
-        client: AsyncAnthropic | None = None,
         model_override: str | None = None,
         extra_skill_dirs: list[str] | None = None,
     ):
@@ -41,7 +38,6 @@ class OptimizationEngine:
         self.project = project
         self.program = program
         self.ui = ui
-        self.client = client or AsyncAnthropic()
         self.git = GitOps(project_dir)
         self.model_override = model_override
         self.extra_skill_dirs = extra_skill_dirs or []
@@ -69,7 +65,7 @@ class OptimizationEngine:
             if panel_name:
                 panel = PanelConfig.load(panel_name, project_dir)
                 self.panel_evaluator = PanelEvaluator(
-                    panel, project_dir, self.client,
+                    panel, project_dir,
                     model_override=model_override,
                     extra_skill_dirs=self.extra_skill_dirs,
                 )
@@ -123,24 +119,20 @@ class OptimizationEngine:
             model = self.model_override or self.project.driver_model or self.program.driver_model
             self.ui.show_phase("Driver thinking...")
 
-            if self.program.driver_mode == "sdk":
-                merged_skill_dirs = (self.program.driver_skill_dirs or []) + self.extra_skill_dirs
-                description = await run_driver_sdk(
-                    self.project_dir, prompt, model,
-                    allowed_tools=self.program.driver_tools or None,
-                    mcp_servers=self.program.driver_mcp_servers or None,
-                    skill_dirs=merged_skill_dirs or None,
-                    max_turns=self.program.driver_max_turns,
-                )
-            else:
-                description = await run_driver_api(
-                    self.project_dir, prompt, self.program, model, self.client,
-                )
+            merged_skill_dirs = (self.program.driver_skill_dirs or []) + self.extra_skill_dirs
+            description = await run_driver_sdk(
+                self.project_dir, prompt, model,
+                allowed_tools=self.program.driver_tools or None,
+                mcp_servers=self.program.driver_mcp_servers or None,
+                skill_dirs=merged_skill_dirs or None,
+                max_turns=self.program.driver_max_turns,
+            )
 
             self.ui.show_proposal(description)
 
-            # 2. Commit
+            # 2. Commit and capture diff
             commit_hash = self.git.commit(description, list(self.program.editable_files))
+            diff = self.git.get_diff()
 
             # 3. Evaluate
             self.ui.show_phase("Evaluating...")
@@ -153,11 +145,11 @@ class OptimizationEngine:
 
             if is_better:
                 status = "keep"
-                self._record_iteration(iteration, score, status, description, result, commit_hash, elapsed)
+                self._record_iteration(iteration, score, status, description, result, commit_hash, diff, elapsed)
                 self.ui.show_kept(iteration, score, description, self.state.best_score)
             else:
                 status = "discard"
-                self._record_iteration(iteration, score, status, description, result, commit_hash, elapsed)
+                self._record_iteration(iteration, score, status, description, result, commit_hash, diff, elapsed)
                 self.git.revert_last()
                 self.ui.show_discarded(iteration, score, description, self.state.best_score)
 
@@ -252,6 +244,7 @@ class OptimizationEngine:
         description: str,
         result: _EvalResult,
         commit_hash: str | None = None,
+        diff: str = "",
         duration: float = 0.0,
     ) -> None:
         record = self.state.record(
@@ -260,6 +253,7 @@ class OptimizationEngine:
             status=status,
             description=description,
             commit_hash=commit_hash,
+            diff=diff,
             duration_seconds=duration,
             agent_scores=result.agent_scores,
             raw_metrics=result.raw_metrics,

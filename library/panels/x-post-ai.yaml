@@ -2,18 +2,20 @@ name: x-post-ai
 description: >
   Panel for X/Twitter posts targeting the AI and developer community.
   Balances developer credibility, AI insight, platform-native engagement,
-  and business/strategic appeal.
+  business/strategic appeal, and plain-language accessibility.
 
 members:
   - agent: ai-developer
-    weight: 0.25
-  - agent: ai-enthusiast
     weight: 0.20
+  - agent: ai-enthusiast
+    weight: 0.15
   - agent: x-post-virality
     weight: 0.20
+  - agent: plain-language
+    weight: 0.15
   - agent: strategic-thinking
     weight: 0.15
   - agent: clarity-conciseness
-    weight: 0.10
+    weight: 0.05
   - agent: audience-engagement
     weight: 0.10

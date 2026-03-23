@@ -13,11 +13,8 @@ Or as plugins:
       plugins/my-plugin/skills/my-skill/SKILL.md
       docs/...
 
-This module handles two use cases:
-  1. SDK mode: resolve skill_dirs to absolute paths for add_dirs so the
-     Claude Code subprocess discovers and can invoke skills.
-  2. API mode: discover SKILL.md files and referenced docs, return their
-     content as a string to inject into the system prompt as knowledge.
+This module resolves skill_dirs to absolute paths for add_dirs so the
+Claude Code subprocess discovers and can invoke skills.
 """
 
 from __future__ import annotations
@@ -64,11 +61,10 @@ def load_skill_content(
     filter_names: list[str] | None = None,
     max_total_chars: int = 100_000,
 ) -> str:
-    """Load skill knowledge for injection into API-mode agent prompts.
+    """Load skill knowledge as a context string.
 
-    For agents that can't invoke skills as tools (API mode), we read the
-    SKILL.md files and any docs they reference, returning everything as a
-    context string for the system prompt.
+    Reads SKILL.md files and any docs they reference, returning everything
+    as a context string.
 
     Args:
         skill_dirs: Directories containing skills.

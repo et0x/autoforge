@@ -121,7 +121,7 @@ error: bool
 3. Loop:
    a. Check break conditions (max_iterations, target_score)
    b. Build driver prompt (state + history + feedback)
-   c. Run driver agent (sdk or api mode)
+   c. Run driver agent
    d. Git commit the change
    e. Run evaluation (objective or panel)
    f. If improved: record "keep"

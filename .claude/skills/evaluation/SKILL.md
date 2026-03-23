@@ -1,6 +1,6 @@
 ---
-description: "How scoring works: agent_runner parallel execution, objective metric extraction, panel consensus, submit_evaluation tool schema"
-when_to_use: "When modifying evaluation logic, debugging scoring, changing the submit_evaluation tool, or working on agent_runner.py, panel.py, objective.py, or scoring.py"
+description: "How scoring works: agent_runner parallel execution, objective metric extraction, panel consensus scoring"
+when_to_use: "When modifying evaluation logic, debugging scoring, or working on agent_runner.py, panel.py, objective.py, or scoring.py"
 user-invocable: true
 ---
 
@@ -23,7 +23,7 @@ __init__(panel, project_dir, client, model_override)
 ```
 - Loads all AgentConfigs from panel.members
 - Applies model_override via `agent.model_copy(update={"model": ...})`
-- Creates AgentRunner with AsyncAnthropic client
+- Creates AgentRunner
 
 ```python
 async evaluate(content, context, on_score) → PanelResult
@@ -41,38 +41,17 @@ async evaluate(content, context, on_score) → PanelResult
 
 ## Agent runner (eval/agent_runner.py)
 
-### SUBMIT_EVALUATION_TOOL schema
-```json
-{
-  "name": "submit_evaluation",
-  "input_schema": {
-    "properties": {
-      "score": {"type": "number", "minimum": 0, "maximum": 10},
-      "reasoning": {"type": "string"},
-      "strengths": {"type": "array", "items": {"type": "string"}},
-      "weaknesses": {"type": "array", "items": {"type": "string"}}
-    },
-    "required": ["score", "reasoning", "strengths", "weaknesses"]
-  }
-}
-```
-
-### API mode (_run_api)
-- System prompt = agent.system_prompt + skill_knowledge + scoring_rubric + SCORING_INSTRUCTIONS
-- Single `client.messages.create()` with `tool_choice: {"type": "tool", "name": "submit_evaluation"}`
-- Forces structured output — agent MUST use the tool
-- Parses `tool_use` block from response content
-
-### SDK mode (_run_sdk)
-- Full `Claude.query()` session with `ClaudeCodeOptions`
-- Agent responds in text format: `SCORE: X / REASONING: ... / STRENGTHS: ... / WEAKNESSES: ...`
-- Parsed by `_parse_sdk_response()` using line-by-line string matching
-- score is clamped to [0.0, 10.0]
+### Agent execution
+All agents run via the Claude Code SDK:
+- Full `claude_query()` session with `ClaudeCodeOptions`
+- Agent responds in text format: `SCORE: X / REASONING: ... / WEAKNESS: ...`
+- Parsed by `_parse_response()` using line-by-line string matching
+- Score is clamped to [0.0, 10.0]
+- Decimal scoring is encouraged (e.g. 6.3, 7.5, 8.2)
 
 ### Error handling
-- API errors → AgentScore(score=5.0, error=True, reasoning=error message)
-- SDK errors → AgentScore(score=5.0, error=True, reasoning=error message)
-- Missing tool_use in API response → score=5.0, error=True
+- Agent errors → AgentScore(score=5.0, error=True, reasoning=error message)
+- The loop never crashes from a single agent failure
 
 ### run_panel()
 ```python

@@ -77,7 +77,7 @@ This means the engine always gets a score to compare — it never crashes from a
 - **Read-only**: `prepare.py` — data loading, BPE tokenizer, `evaluate_bpb()` function (the ground truth metric)
 - **Metric**: `val_bpb` (validation bits per byte) — lower is better, vocab-size-independent
 - **Time budget**: 5 minutes wall-clock training per iteration
-- **Driver mode**: SDK (full Claude Code session — the driver needs to read/edit complex Python code and reason about architecture)
+- **Driver**: Full Claude Code session — the driver reads/edits complex Python code and reasons about architecture
 
 ### Metric extraction chain
 ```yaml
@@ -121,7 +121,6 @@ objective:
   timeout_seconds: 120
 
 driver_model: sonnet
-driver_mode: sdk
 driver_instructions: |
   You are optimizing solution.py to maximize the benchmark score.
   Read problem.md for the problem statement and test_cases.py to

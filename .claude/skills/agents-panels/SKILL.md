@@ -1,5 +1,5 @@
 ---
-description: "Agent persona YAML schema, panel composition with weights, SDK vs API mode, skills/MCPs/tools for agents"
+description: "Agent persona YAML schema, panel composition with weights, skills/MCPs/tools for agents"
 when_to_use: "When creating or modifying evaluator agents, configuring panels, setting up skills or MCPs for agents, or tuning agent weights"
 user-invocable: true
 ---
@@ -13,17 +13,12 @@ name: str                      # required
 description: str               # default ""
 model: str                     # default "haiku" — short name or full model ID
 temperature: float             # default 0.3
-max_tokens: int                # default 2048
+max_tokens: int                # default 512
 
 system_prompt: str             # required — the agent's persona and evaluation criteria
 scoring_rubric: str            # default "" — appended to system prompt, guides 0-10 scale
 
-# Execution mode
-mode: "api" | "sdk"           # default "api"
-  # api: single API call, forced structured output via submit_evaluation tool
-  # sdk: multi-turn Claude Code session with tools, MCPs, skills
-
-# SDK-mode only
+# Tools and MCPs for the Claude Code SDK session
 tools: list[str]               # default [] — e.g. ["Read","Grep","Skill","WebSearch"]
 mcp_servers: dict[str, dict]   # default {} — MCP server configs
 skill_dirs: list[str]          # default [] — directories containing skills
@@ -31,28 +26,18 @@ skills: list[str]              # default [] — filter to specific skill names
 max_turns: int                 # default 10 — prevents runaway agents
 ```
 
-### Property: `is_agentic` → True when `mode == "sdk"`
-
 ## Agent execution flow
 
-### API mode (default, fast, cheap)
-1. System prompt = agent.system_prompt + skill_knowledge (if skill_dirs set) + scoring_rubric + SCORING_INSTRUCTIONS
-2. User message = context + content to evaluate
-3. Single `client.messages.create()` with `tool_choice: {"type": "tool", "name": "submit_evaluation"}`
-4. Response is forced structured output: `{score, reasoning, strengths, weaknesses}`
-5. On error: returns score=5.0 with error=True
+All agents run via the Claude Code SDK:
 
-### SDK mode (powerful, multi-turn)
-1. Launches full Claude Code session via `Claude.query()`
+1. Launches a Claude Code session via `claude_query()`
 2. Agent can take up to `max_turns` turns, using tools to research before scoring
 3. skill_dirs are passed as `add_dirs` to ClaudeCodeOptions (skills become discoverable)
 4. "Skill" tool is auto-added to allowed_tools if skill_dirs is set
 5. mcp_servers are converted to McpStdioServerConfig/McpHttpServerConfig
-6. Agent returns text with `SCORE: / REASONING: / STRENGTHS: / WEAKNESSES:` format
-7. Parsed by `_parse_sdk_response()` in agent_runner.py
-
-### Skill loading for API-mode agents
-When an API-mode agent has `skill_dirs` configured, `load_skill_content()` from `skills.py` reads the SKILL.md files + referenced docs and injects them into the system prompt as `## Skill Knowledge`. The `skills` list filters which skills to load. `max_total_chars` defaults to 100,000.
+6. Agent returns text with `SCORE: / REASONING: / WEAKNESS:` format
+7. Parsed by `_parse_response()` in agent_runner.py
+8. On error: returns score=5.0 with error=True
 
 ## PanelConfig fields (src/autoforge/config.py)
 
@@ -80,14 +65,15 @@ The `--model` CLI flag applies to ALL agents (driver + evaluators). In PanelEval
 
 Precedence: CLI `--model` > project.yaml `driver_model` > program YAML `driver_model` > agent YAML `model`
 
-## Built-in agents (10)
+## Built-in agents
 
-All use `mode: api`, `model: haiku`, `temperature: 0.3`:
+All use `model: haiku`, `temperature: 0.3`:
 - formal-writing, technical-accuracy, strategic-thinking
 - national-security-language, evidence-based-reasoning, audience-engagement
 - clarity-conciseness, creative-writing, data-driven-analysis, emotional-intelligence
+- ai-developer, ai-enthusiast, x-post-virality, plain-language
 
-## Built-in panels (4)
+## Built-in panels
 
 | Panel | Agents | Top weight |
 |-------|--------|-----------|
@@ -95,6 +81,7 @@ All use `mode: api`, `model: haiku`, `temperature: 0.3`:
 | government-stakeholders | 6 agents | national-security-language (0.25) |
 | technical-blog | 5 agents | technical-accuracy + clarity (0.25 each) |
 | executive-summary | 5 agents | strategic-thinking + clarity (0.25 each) |
+| x-post-ai | 7 agents | ai-developer + x-post-virality (0.20 each) |
 
 ## Creating custom agents/panels
 
@@ -103,7 +90,7 @@ Place YAML files in:
 - `~/.autoforge/library/agents/` or `~/.autoforge/library/panels/` — user-global
 - `library/agents/` or `library/panels/` — built-in (lowest priority)
 
-Panels can mix built-in and custom agents. SDK-mode and API-mode agents run in parallel in the same panel via `asyncio.gather()`.
+All agents in a panel run in parallel via `asyncio.gather()`.
 
 ## MCP server config format
 

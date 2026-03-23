@@ -38,7 +38,6 @@ panel_eval:                        # optional override
 # Driver agent configuration
 driver_instructions: str           # default "" — the "program.md" equivalent
 driver_model: str                  # default "sonnet" — short name or full model ID
-driver_mode: "sdk" | "api"        # default "sdk"
 driver_tools: list[str]            # default ["Read","Edit","Write","Glob","Grep","Bash"]
 driver_mcp_servers: dict           # default {} — MCP server configs
 driver_skill_dirs: list[str]       # default [] — directories with skills
@@ -66,14 +65,13 @@ setup_commands: list[str]          # default [] — run once at start
 ### content-optimization
 - Edits `content.md`, reads `brief.md`
 - Panel mode with `linkedin-professional` default panel
-- Driver mode: `api` (single-turn, text in/out)
+- Template files: `content.md`, `brief.md` (copied on init with boilerplate)
 - max_iterations: 50
 
 ### ml-training
 - Edits `train.py`, reads `prepare.py`
 - Objective mode: runs `uv run train.py`, extracts `val_bpb`, minimizes
-- Driver mode: `sdk` (full Claude Code session for code editing)
-- Template files: `train.py`, `prepare.py` (in `library/programs/ml-training/`, copied on init)
+- Template files: `train.py`, `prepare.py` (copied on init)
 - never_stop: true
 
 ## Program directory structure
@@ -102,7 +100,6 @@ library/programs/
 
 Config resolution also supports flat files (`<name>.yaml`) for simple programs with no template files.
 
-## Driver modes
+## Driver agent
 
-- **sdk**: Full Claude Code session via `Claude.query()`. The driver can read files, run bash, use MCPs, invoke skills. Best for code editing (ml-training).
-- **api**: Single Anthropic API call. File contents are included in the prompt, modified contents are parsed from the response using `FILE:` blocks. Best for text content (content-optimization).
+The driver always runs via the Claude Code SDK (`Claude.query()`). It gets a full agentic session where it can read files, run bash, use MCPs, and invoke skills. Configured via `driver_tools`, `driver_mcp_servers`, `driver_skill_dirs`, and `driver_max_turns` in the program YAML.

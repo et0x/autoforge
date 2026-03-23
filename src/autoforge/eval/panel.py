@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
-from anthropic import AsyncAnthropic
-
 from autoforge.config import AgentConfig, PanelConfig
 from autoforge.eval.agent_runner import AgentRunner
 from autoforge.eval.scoring import weighted_consensus
@@ -32,13 +30,12 @@ class PanelEvaluator:
         self,
         panel: PanelConfig,
         project_dir: Path | None = None,
-        client: AsyncAnthropic | None = None,
         model_override: str | None = None,
         extra_skill_dirs: list[str] | None = None,
     ):
         self.panel = panel
         self.project_dir = project_dir
-        self.runner = AgentRunner(client)
+        self.runner = AgentRunner()
 
         # Load all agent configs, applying overrides
         self.agents: dict[str, AgentConfig] = {}

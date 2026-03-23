@@ -15,15 +15,15 @@ Ask the user:
 2. **Who is this agent pretending to be?** (e.g. "a senior security engineer", "a CMO reviewing marketing copy", "a federal compliance officer")
 3. **What specific things should this agent look for when scoring?** Get 4-6 concrete evaluation criteria.
 
-## Step 2: Determine execution mode
+## Step 2: Determine tools needed
 
 Ask:
 4. **Does this agent need tools to do its job?** For example:
-   - Does it need to search the web to fact-check claims? → SDK mode with WebSearch
-   - Does it need to read files from a knowledge base? → SDK mode with Read + Skill
-   - Does it just read the content and judge it? → API mode (default, faster, cheaper)
+   - Does it need to search the web to fact-check claims? → Add WebSearch
+   - Does it need to read files from a knowledge base? → Add Read + Skill
+   - Does it just read the content and judge it? → Default tools are fine
 
-If SDK mode, ask what tools and skills it needs.
+If it needs skills, ask what tools and skill directories it needs.
 
 ## Step 3: Choose the model
 
@@ -44,9 +44,8 @@ name: <kebab-case-name>
 description: <one line — this appears in listings>
 model: <haiku|sonnet|opus or full model ID>
 temperature: 0.3
-mode: <api|sdk>
 
-# Only if SDK mode:
+# Optional — configure if the agent needs tools beyond defaults:
 tools: [Read, Grep, Skill, WebSearch]  # as needed
 skill_dirs: [~/path/to/skills]          # if using skills
 skills: [specific-skill-name]           # filter to specific skills
@@ -93,4 +92,4 @@ autoforge eval --agent <name> -f content.md
 
 formal-writing, technical-accuracy, strategic-thinking, national-security-language, evidence-based-reasoning, audience-engagement, clarity-conciseness, creative-writing, data-driven-analysis, emotional-intelligence
 
-All use `mode: api`, `model: haiku`, `temperature: 0.3`.
+All use `model: haiku`, `temperature: 0.3`.

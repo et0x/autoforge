@@ -5,9 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from anthropic import AsyncAnthropic
-
-from autoforge.config import ProgramConfig, resolve_model
+from autoforge.config import resolve_model
 
 
 def _build_mcp_servers(raw: dict[str, dict]) -> dict[str, Any]:
@@ -86,79 +84,3 @@ async def run_driver_sdk(
                     result_text = block.text
 
     return result_text.strip() if result_text else "No description provided"
-
-
-async def run_driver_api(
-    workspace: Path,
-    prompt: str,
-    program: ProgramConfig,
-    model: str = "sonnet",
-    client: AsyncAnthropic | None = None,
-) -> str:
-    """Run the driver agent using the raw Anthropic API (single-turn).
-
-    Simpler approach: send file contents in prompt, get back modified contents.
-    Best for content optimization where edits are text-only.
-    Returns a description of what was changed.
-    """
-    if client is None:
-        client = AsyncAnthropic()
-
-    system = (
-        "You are a driver agent for an optimization loop. You will be given "
-        "content to improve and feedback from evaluators. Make ONE focused "
-        "change based on the feedback. Respond with:\n"
-        "1. DESCRIPTION: A one-line description of your change\n"
-        "2. For each file you modified, output:\n"
-        "   FILE: <filename>\n"
-        "   ```\n"
-        "   <complete new file contents>\n"
-        "   ```\n"
-    )
-
-    response = await client.messages.create(
-        model=resolve_model(model),
-        max_tokens=8192,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    result = response.content[0].text
-    description = _extract_description(result)
-
-    _apply_file_outputs(result, workspace, program)
-
-    return description
-
-
-def _extract_description(text: str) -> str:
-    """Extract the DESCRIPTION line from driver output."""
-    for line in text.splitlines():
-        line = line.strip()
-        if line.startswith("DESCRIPTION:"):
-            return line[len("DESCRIPTION:"):].strip()
-    for line in text.splitlines():
-        if line.strip():
-            return line.strip()[:100]
-    return "No description"
-
-
-def _apply_file_outputs(text: str, workspace: Path, program: ProgramConfig) -> None:
-    """Parse FILE: blocks and write them to the workspace."""
-    import re
-
-    pattern = r"FILE:\s*(\S+)\s*\n```[^\n]*\n(.*?)```"
-    matches = re.findall(pattern, text, re.DOTALL)
-
-    allowed_patterns = set(program.editable_files)
-
-    for filename, content in matches:
-        filepath = workspace / filename
-        rel = str(filepath.relative_to(workspace))
-        is_allowed = any(
-            filepath.match(pat) or rel == pat
-            for pat in allowed_patterns
-        )
-        if is_allowed:
-            filepath.parent.mkdir(parents=True, exist_ok=True)
-            filepath.write_text(content)

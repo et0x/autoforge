@@ -146,7 +146,6 @@ class ProgramConfig(BaseModel):
     driver_instructions: str = ""
     simplicity_criterion: bool = True
     driver_model: str = "sonnet"
-    driver_mode: str = "sdk"  # "sdk" (Agent SDK) or "api" (raw API)
     driver_tools: list[str] = Field(default_factory=lambda: ["Read", "Edit", "Write", "Glob", "Grep", "Bash"])
     driver_mcp_servers: dict[str, dict] = Field(default_factory=dict)
     driver_skill_dirs: list[str] = Field(default_factory=list)
@@ -184,35 +183,25 @@ class AgentConfig(BaseModel):
     description: str = ""
     model: str = "haiku"
     temperature: float = 0.3
-    max_tokens: int = 2048
+    max_tokens: int = 512
 
     system_prompt: str
     scoring_rubric: str = ""
 
-    # Agent execution mode:
-    #   "api"  — single-turn, content in prompt, forced tool_choice (fast, cheap)
-    #   "sdk"  — multi-turn Claude Code session with tools, MCPs, etc. (powerful)
-    mode: str = "api"
-
-    # Tools and MCPs (only used in "sdk" mode)
+    # Tools and MCPs for the Claude Code SDK session
     tools: list[str] = []
     mcp_servers: dict[str, dict] = Field(default_factory=dict)
 
     # Skills: directories containing .claude/skills/ or plugin structures.
-    # SDK mode: passed as add_dirs to Claude.query() so the agent can invoke skills.
-    # API mode: SKILL.md + referenced docs are read and injected into system prompt.
+    # Passed as add_dirs to Claude.query() so the agent can invoke skills.
     skill_dirs: list[str] = Field(default_factory=list)
 
     # Optional: only load specific skills by name (e.g. ["netrise-knowledge-base"]).
     # If empty, all discovered skills from skill_dirs are loaded.
     skills: list[str] = Field(default_factory=list)
 
-    # Max turns for SDK mode (prevents runaway agents)
+    # Max turns (prevents runaway agents)
     max_turns: int = 10
-
-    @property
-    def is_agentic(self) -> bool:
-        return self.mode == "sdk"
 
     @classmethod
     def load(cls, name: str, project_dir: Path | None = None) -> "AgentConfig":
