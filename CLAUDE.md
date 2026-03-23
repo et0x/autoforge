@@ -30,6 +30,9 @@ Project-local `.autoforge/<kind>/` > user-global `~/.autoforge/library/<kind>/` 
 - Model names can be short (`haiku`, `sonnet`, `opus`) or full IDs — `resolve_model()` in config.py handles mapping
 - Panel weights must sum to 1.0
 - `--model` CLI flag overrides all agent models (driver + evaluators)
+- `--context` / `--context-file` inject ad-hoc info into all prompts without editing YAML
+- `--skill-dir` adds skill directories to all agents at runtime
+- All CLI flags are additive — they merge with project.yaml and agent configs, never replace
 - Project state lives in `.autoforge/` (gitignored), never pollutes framework repo
 - Evaluator agents default to API mode (single-turn, cheap). SDK mode is opt-in per agent for tools/MCPs/skills.
 

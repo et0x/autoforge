@@ -35,6 +35,7 @@ class OptimizationEngine:
         ui: ProgressUI,
         client: AsyncAnthropic | None = None,
         model_override: str | None = None,
+        extra_skill_dirs: list[str] | None = None,
     ):
         self.project_dir = project_dir
         self.project = project
@@ -43,6 +44,7 @@ class OptimizationEngine:
         self.client = client or AsyncAnthropic()
         self.git = GitOps(project_dir)
         self.model_override = model_override
+        self.extra_skill_dirs = extra_skill_dirs or []
 
         # Determine direction
         if program.eval_mode == EvalMode.OBJECTIVE and program.objective:
@@ -69,6 +71,7 @@ class OptimizationEngine:
                 self.panel_evaluator = PanelEvaluator(
                     panel, project_dir, self.client,
                     model_override=model_override,
+                    extra_skill_dirs=self.extra_skill_dirs,
                 )
 
     async def run(self, max_iterations: int | None = None, target_score: float | None = None) -> None:
@@ -116,11 +119,12 @@ class OptimizationEngine:
             self.ui.show_phase("Driver thinking...")
 
             if self.program.driver_mode == "sdk":
+                merged_skill_dirs = (self.program.driver_skill_dirs or []) + self.extra_skill_dirs
                 description = await run_driver_sdk(
                     self.project_dir, prompt, model,
                     allowed_tools=self.program.driver_tools or None,
                     mcp_servers=self.program.driver_mcp_servers or None,
-                    skill_dirs=self.program.driver_skill_dirs or None,
+                    skill_dirs=merged_skill_dirs or None,
                     max_turns=self.program.driver_max_turns,
                 )
             else:

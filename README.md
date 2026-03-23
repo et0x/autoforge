@@ -433,13 +433,49 @@ my-project/
 
 ```
 autoforge init <name> -p <program> [--panel <panel>]
-autoforge run [-n iterations] [-t target] [-m model]
-autoforge eval [--agent <name> -f <file>]
+autoforge run [-n N] [-t score] [-m model] [-c context] [-C file] [-s skill_dir]
+autoforge eval [--agent <name> -f <file>] [-m model] [-c context] [-C file] [-s skill_dir]
 autoforge status
-autoforge history
+autoforge history [-n last]
 autoforge program list|show <name>
 autoforge agent list|show <name>
 autoforge panel list|show <name>
+```
+
+### Ad-hoc context and skills
+
+You don't need to edit YAML files to give agents extra information. Use CLI flags:
+
+```bash
+# Inject context into all agent prompts (driver + evaluators)
+autoforge run -c "This post is about Executive Order 14028 on cybersecurity"
+
+# Read context from a file
+autoforge run -C exec-order-summary.md
+
+# Combine multiple sources
+autoforge run \
+  -c "Audience: federal CISOs attending RSA 2026" \
+  -C executive-order.md \
+  -C company-talking-points.md
+
+# Add skill directories for all agents at runtime
+autoforge run -s ~/repos/my-knowledge-base
+
+# Everything composes
+autoforge run -n 15 -m opus \
+  -c "The executive order can be found at https://whitehouse.gov/eo-14028" \
+  -C background.md \
+  -s ~/repos/company-knowledge
+```
+
+All flags are additive — they merge with whatever is in `project.yaml` and agent configs. `-c` and `-C` are appended to `extra_context`. `-s` is appended to each agent's `skill_dirs`.
+
+The `eval` command accepts the same flags for one-shot testing:
+
+```bash
+autoforge eval -c "Written for a government audience" -C policy-context.md
+autoforge eval --agent formal-writing -f content.md -c "This is a policy memo"
 ```
 
 ## Agent execution modes

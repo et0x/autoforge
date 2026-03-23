@@ -129,14 +129,18 @@ error: bool
 
 ## CLI commands
 
-### `autoforge run [-n N] [-t SCORE] [-m MODEL] [-d DIR]`
-- Loads project + program config
-- Creates ProgressUI
-- Runs OptimizationEngine.run()
+### `autoforge run [-n N] [-t SCORE] [-m MODEL] [-c CONTEXT] [-C FILE] [-s SKILL_DIR] [-d DIR]`
+- `-c` / `--context`: ad-hoc context string, injected into driver + evaluator prompts. Repeatable.
+- `-C` / `--context-file`: read context from a file. Repeatable.
+- `-s` / `--skill-dir`: add skill directory for all agents (driver + evaluators). Repeatable.
+- All flags are additive — merged with project.yaml `extra_context` and agent YAML `skill_dirs`.
+- Context is built by `_build_extra_context()` in cli.py, then passed to engine.
+- Skill dirs are passed as `extra_skill_dirs` to engine and PanelEvaluator.
 
-### `autoforge eval [--agent NAME -f FILE] [-d DIR]`
-- Single agent test: loads agent, reads file, runs one evaluation
-- Full panel test: loads project panel, reads editable files, runs panel evaluation
+### `autoforge eval [--agent NAME -f FILE] [-m MODEL] [-c CONTEXT] [-C FILE] [-s SKILL_DIR] [-d DIR]`
+- Accepts the same context and skill flags as `run`
+- Single agent test: loads agent, applies overrides, reads file, runs one evaluation
+- Full panel test: loads project panel, applies overrides, reads editable files, runs panel evaluation
 
 ### `autoforge status [-d DIR]`
 - Prints: project name, program, panel, iteration, best score, direction

@@ -93,13 +93,45 @@ def run(
     iterations: Optional[int] = typer.Option(None, "--iterations", "-n", help="Max iterations"),
     target: Optional[float] = typer.Option(None, "--target", "-t", help="Target score to stop at"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Override model for all agents (e.g. opus, claude-opus-4-6)"),
+    context: Optional[list[str]] = typer.Option(None, "--context", "-c", help="Ad-hoc context injected into all prompts (repeatable)"),
+    context_file: Optional[list[str]] = typer.Option(None, "--context-file", "-C", help="Read context from a file (repeatable)"),
+    skill_dir: Optional[list[str]] = typer.Option(None, "--skill-dir", "-s", help="Add skill directory for all agents (repeatable)"),
     directory: Optional[str] = typer.Option(None, "--dir", "-d", help="Project directory (default: cwd)"),
 ):
     """Start the optimization loop."""
-    asyncio.run(_run_async(iterations, target, model, directory))
+    # Build merged context from --context and --context-file flags
+    extra_context = _build_extra_context(context, context_file)
+    skill_dirs = skill_dir or []
+
+    asyncio.run(_run_async(iterations, target, model, extra_context, skill_dirs, directory))
 
 
-async def _run_async(iterations: int | None, target: float | None, model: str | None, directory: str | None) -> None:
+def _build_extra_context(
+    context: list[str] | None,
+    context_file: list[str] | None,
+) -> str:
+    """Merge --context strings and --context-file contents into one block."""
+    parts: list[str] = []
+    if context:
+        parts.extend(context)
+    if context_file:
+        for path_str in context_file:
+            p = Path(path_str).expanduser()
+            if p.is_file():
+                parts.append(p.read_text())
+            else:
+                console.print(f"[crash]Warning: context file not found: {path_str}[/]")
+    return "\n\n".join(parts)
+
+
+async def _run_async(
+    iterations: int | None,
+    target: float | None,
+    model: str | None,
+    extra_context: str,
+    skill_dirs: list[str],
+    directory: str | None,
+) -> None:
     from autoforge.config import ProgramConfig, ProjectConfig
     from autoforge.engine import OptimizationEngine
     from autoforge.ui.progress import ProgressUI
@@ -107,6 +139,15 @@ async def _run_async(iterations: int | None, target: float | None, model: str | 
     project_dir = Path(directory) if directory else Path.cwd()
     project = ProjectConfig.load(project_dir)
     program = ProgramConfig.load(project.program, project_dir)
+
+    # Merge CLI context with project.yaml context
+    if extra_context:
+        if project.extra_context:
+            project = project.model_copy(
+                update={"extra_context": project.extra_context + "\n\n" + extra_context}
+            )
+        else:
+            project = project.model_copy(update={"extra_context": extra_context})
 
     panel_name = project.panel or program.default_panel
 
@@ -119,7 +160,11 @@ async def _run_async(iterations: int | None, target: float | None, model: str | 
     )
     ui.show_header()
 
-    engine = OptimizationEngine(project_dir, project, program, ui, model_override=model)
+    engine = OptimizationEngine(
+        project_dir, project, program, ui,
+        model_override=model,
+        extra_skill_dirs=skill_dirs,
+    )
     await engine.run(max_iterations=iterations, target_score=target)
 
 
@@ -131,27 +176,44 @@ async def _run_async(iterations: int | None, target: float | None, model: str | 
 def eval(
     agent_name: Optional[str] = typer.Option(None, "--agent", "-a", help="Test a single agent"),
     file: Optional[str] = typer.Option(None, "--file", "-f", help="File to evaluate"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Override model for all agents"),
+    context: Optional[list[str]] = typer.Option(None, "--context", "-c", help="Ad-hoc context (repeatable)"),
+    context_file: Optional[list[str]] = typer.Option(None, "--context-file", "-C", help="Read context from file (repeatable)"),
+    skill_dir: Optional[list[str]] = typer.Option(None, "--skill-dir", "-s", help="Add skill directory (repeatable)"),
     directory: Optional[str] = typer.Option(None, "--dir", "-d", help="Project directory"),
 ):
     """Run a single evaluation (without the optimization loop)."""
-    asyncio.run(_eval_async(agent_name, file, directory))
+    extra_context = _build_extra_context(context, context_file)
+    skill_dirs = skill_dir or []
+    asyncio.run(_eval_async(agent_name, file, model, extra_context, skill_dirs, directory))
 
 
-async def _eval_async(agent_name: str | None, file: str | None, directory: str | None) -> None:
-    from anthropic import AsyncAnthropic
+async def _eval_async(
+    agent_name: str | None,
+    file: str | None,
+    model: str | None,
+    extra_context: str,
+    skill_dirs: list[str],
+    directory: str | None,
+) -> None:
     from autoforge.config import AgentConfig, PanelConfig, ProgramConfig, ProjectConfig
     from autoforge.eval.agent_runner import AgentRunner
     from autoforge.eval.panel import PanelEvaluator
-    from autoforge.eval.scoring import weighted_consensus
 
     project_dir = Path(directory) if directory else Path.cwd()
 
     if agent_name and file:
         # Single agent test
         agent = AgentConfig.load(agent_name, project_dir)
+        if model:
+            agent = agent.model_copy(update={"model": model})
+        if skill_dirs:
+            agent = agent.model_copy(update={
+                "skill_dirs": agent.skill_dirs + skill_dirs,
+            })
         content = Path(file).read_text()
         runner = AgentRunner()
-        score = await runner.run_evaluator(agent, content, weight=1.0)
+        score = await runner.run_evaluator(agent, content, context=extra_context, weight=1.0)
         console.print(f"\n[agent]{agent.name}[/] scored: [score]{score.score:.1f}/10[/]")
         console.print(f"  Reasoning: {score.reasoning}")
         if score.strengths:
@@ -168,8 +230,17 @@ async def _eval_async(agent_name: str | None, file: str | None, directory: str |
         console.print("[crash]No panel configured for this project[/]")
         raise typer.Exit(1)
 
+    # Merge CLI context with project context
+    combined_context = project.extra_context or ""
+    if extra_context:
+        combined_context = (combined_context + "\n\n" + extra_context).strip()
+
     panel = PanelConfig.load(panel_name, project_dir)
-    evaluator = PanelEvaluator(panel, project_dir)
+    evaluator = PanelEvaluator(
+        panel, project_dir,
+        model_override=model,
+        extra_skill_dirs=skill_dirs,
+    )
 
     # Read content
     content_parts = []
@@ -179,14 +250,12 @@ async def _eval_async(agent_name: str | None, file: str | None, directory: str |
                 content_parts.append(path.read_text())
     content = "\n\n".join(content_parts)
 
-    context = project.extra_context or ""
-
     async def on_score(s: AgentScore) -> None:
         status = "ERR" if s.error else f"{s.score:.1f}"
         console.print(f"  [agent]{s.agent:<28s}[/] {status:>5s}  (w: {s.weight:.2f})")
 
     console.print(f"\n[bold]Evaluating with panel: {panel.name}[/]\n")
-    result = await evaluator.evaluate(content, context, on_score)
+    result = await evaluator.evaluate(content, combined_context, on_score)
     consensus = result.consensus_score
     console.print(f"\n  [bold]Consensus score:[/] [score]{consensus:.2f}/10[/]\n")
 

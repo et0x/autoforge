@@ -34,17 +34,23 @@ class PanelEvaluator:
         project_dir: Path | None = None,
         client: AsyncAnthropic | None = None,
         model_override: str | None = None,
+        extra_skill_dirs: list[str] | None = None,
     ):
         self.panel = panel
         self.project_dir = project_dir
         self.runner = AgentRunner(client)
 
-        # Load all agent configs, applying model override if provided
+        # Load all agent configs, applying overrides
         self.agents: dict[str, AgentConfig] = {}
         for member in panel.members:
             agent = AgentConfig.load(member.agent, project_dir)
+            updates: dict[str, Any] = {}
             if model_override:
-                agent = agent.model_copy(update={"model": model_override})
+                updates["model"] = model_override
+            if extra_skill_dirs:
+                updates["skill_dirs"] = agent.skill_dirs + extra_skill_dirs
+            if updates:
+                agent = agent.model_copy(update=updates)
             self.agents[member.agent] = agent
 
     async def evaluate(
