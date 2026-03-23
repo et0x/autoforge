@@ -10,7 +10,16 @@ Python 3.10+. Pydantic models for config. Typer CLI. Rich terminal UI. Anthropic
 
 - `src/autoforge/` — all source code, installed as `autoforge` package
 - `library/` — built-in YAML templates (programs, agents, panels) + ML template files
+- `projects/` — user project directories (gitignored), created by `autoforge init`
 - CLI entry point: `autoforge` (mapped to `autoforge.cli:app`)
+
+## Running CLI commands
+
+If a virtualenv is present, activate it before running `autoforge` commands. Projects should be created inside `projects/` (gitignored) to avoid polluting the repo root:
+
+```bash
+autoforge init <name> -d projects/<name> [--program ...] [--panel ...]
+```
 
 ## Key concepts
 

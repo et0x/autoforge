@@ -12,6 +12,12 @@ user-invocable: true
 autoforge init <name> -p <program> [--panel <panel>] [-d <dir>]
 ```
 
+**Important:** If a virtualenv is present, activate it first. Projects should be created in `projects/` (gitignored) to keep the repo root clean:
+
+```bash
+autoforge init <name> -p <program> -d projects/<name>
+```
+
 1. Creates `<dir>/.autoforge/` directory
 2. Loads ProgramConfig to get defaults
 3. Creates ProjectConfig with name, program, panel
