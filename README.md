@@ -77,6 +77,152 @@ autoforge eval
 autoforge eval --agent formal-writing -f content.md
 ```
 
+## Examples
+
+### Simple: optimize a LinkedIn post
+
+No custom agents, no skills — just a draft post and a built-in panel.
+
+```bash
+# Create the project
+autoforge init linkedin-post -p content-optimization --panel linkedin-professional
+cd linkedin-post
+
+# Write your draft
+cat > content.md << 'EOF'
+We just shipped a new feature that lets users do X. It took us 3 months
+and we learned a lot along the way. Here's what we found.
+
+First, the problem was harder than we thought...
+EOF
+
+# Write the brief so the driver agent knows what you're going for
+cat > brief.md << 'EOF'
+Audience: senior engineering leaders on LinkedIn.
+Goal: establish thought leadership around solving hard infrastructure problems.
+Tone: confident but not arrogant. Specific, not vague.
+Length: 800-1200 words.
+EOF
+
+# Run 15 iterations — each one edits the post, 6 agents score it in
+# parallel, and the change is kept only if the consensus score improves
+autoforge run -n 15
+```
+
+That's it. The `linkedin-professional` panel uses 6 evaluator agents (audience-engagement, clarity-conciseness, strategic-thinking, evidence-based-reasoning, emotional-intelligence, creative-writing) weighted for what makes a good LinkedIn post. The driver agent reads their feedback each iteration and targets the weakest areas.
+
+### Advanced: optimize a post that references your company's product
+
+Say you're writing about your company's capabilities and you need the evaluators to actually know your product to score accuracy. You create a custom agent that has access to your knowledge base via a skill, and a custom panel that includes it.
+
+```bash
+# Create the project
+autoforge init product-announcement -p content-optimization
+cd product-announcement
+mkdir -p .autoforge/agents .autoforge/panels
+```
+
+Create a custom evaluator agent that uses your company's knowledge base skill:
+
+```yaml
+# .autoforge/agents/product-accuracy.yaml
+name: product-accuracy
+description: Verifies claims against internal product knowledge base
+model: sonnet
+mode: sdk
+max_turns: 8
+
+skill_dirs:
+  - ~/repos/your-company-knowledge-base
+
+skills:
+  - your-product-knowledge
+
+tools:
+  - Read
+  - Grep
+  - Skill
+
+system_prompt: |
+  You are a product expert. Before scoring, use the product knowledge
+  skill to verify every claim about the product's capabilities,
+  architecture, and positioning. Flag anything inaccurate or misleading.
+
+scoring_rubric: |
+  0-2: Major factual errors about the product
+  3-4: Several inaccuracies or unsupported claims
+  5-6: Mostly accurate but vague or imprecise
+  7-8: Accurate and specific
+  9-10: Every claim verified, precise, and well-positioned
+```
+
+Create a custom panel that includes this agent alongside the built-in ones:
+
+```yaml
+# .autoforge/panels/product-launch.yaml
+name: product-launch
+description: Panel for product announcements requiring domain accuracy
+
+members:
+  - agent: product-accuracy
+    weight: 0.30
+  - agent: audience-engagement
+    weight: 0.20
+  - agent: strategic-thinking
+    weight: 0.20
+  - agent: clarity-conciseness
+    weight: 0.15
+  - agent: formal-writing
+    weight: 0.15
+```
+
+Now run it:
+
+```bash
+# Write your draft and brief
+cat > content.md << 'EOF'
+Excited to announce that [Company] now supports full firmware
+analysis across all major RTOS platforms...
+EOF
+
+cat > brief.md << 'EOF'
+Audience: CISOs and security engineers.
+Goal: announce new platform capability, drive demo requests.
+Tone: authoritative, technical but accessible.
+EOF
+
+# Update project to use your custom panel
+cat > .autoforge/project.yaml << 'EOF'
+name: product-announcement
+program: content-optimization
+panel: product-launch
+EOF
+
+# Run — the product-accuracy agent will use the Skill tool to
+# fact-check claims against your knowledge base before scoring
+autoforge run -n 20 -m sonnet
+```
+
+The `product-accuracy` agent runs in SDK mode — it gets a full Claude Code session where it can invoke your knowledge base skill, read docs, and verify claims before scoring. The other agents run in API mode (fast, single-turn). All 5 run in parallel each iteration.
+
+You could do the same thing with an MCP server instead of a skill. For example, if your product data lives in a database with an MCP interface:
+
+```yaml
+# .autoforge/agents/product-accuracy.yaml
+name: product-accuracy
+mode: sdk
+model: sonnet
+tools: [Read, Grep]
+mcp_servers:
+  product-db:
+    command: npx
+    args: ["your-product-mcp-server"]
+    env:
+      API_KEY: "${PRODUCT_API_KEY}"
+system_prompt: |
+  You verify product claims using the product-db MCP server...
+```
+
 ## Project structure
 
 ```
