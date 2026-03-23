@@ -7,9 +7,14 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from dotenv import load_dotenv
 from rich.table import Table
 
 from autoforge.ui.console import console
+
+# Load .env — search cwd and parent directories
+load_dotenv(dotenv_path=Path.cwd() / ".env")  # project dir
+load_dotenv()  # also searches upward via default behavior
 
 app = typer.Typer(
     name="autoforge",

@@ -51,6 +51,10 @@ For objective problems (ML training), step 2 is replaced by running a command an
 # Install
 uv sync
 
+# Set up your API key (required for evaluator agents)
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY
+
 # See what's available
 autoforge program list
 autoforge agent list

@@ -47,7 +47,7 @@ async def run_driver_sdk(
     use tools (Read, Edit, Bash, etc.), call MCPs, invoke skills, etc.
     Returns a description of what was changed.
     """
-    from claude_code_sdk import Claude, ClaudeCodeOptions
+    from claude_code_sdk import query as claude_query, ClaudeCodeOptions
 
     if allowed_tools is None:
         allowed_tools = ["Read", "Edit", "Write", "Glob", "Grep", "Bash"]
@@ -75,9 +75,15 @@ async def run_driver_sdk(
             options.add_dirs = [str(d) for d in resolved]
 
     result_text = ""
-    async for message in Claude.query(prompt=prompt, options=options):
-        if hasattr(message, "content") and isinstance(message.content, str):
-            result_text = message.content
+    async for message in claude_query(prompt=prompt, options=options):
+        # ResultMessage has the final output
+        if hasattr(message, "result") and message.result:
+            result_text = message.result
+        # AssistantMessage has content blocks — capture text from them
+        elif hasattr(message, "content") and isinstance(message.content, list):
+            for block in message.content:
+                if hasattr(block, "text"):
+                    result_text = block.text
 
     return result_text.strip() if result_text else "No description provided"
 

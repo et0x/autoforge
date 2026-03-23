@@ -205,7 +205,7 @@ class AgentRunner:
         The agent can take multiple turns, use tools (Read, Grep, Bash, WebSearch, etc.),
         call MCP servers, and do research before scoring.
         """
-        from claude_code_sdk import Claude, ClaudeCodeOptions
+        from claude_code_sdk import query as claude_query, ClaudeCodeOptions
         from autoforge.driver.driver import _build_mcp_servers
 
         system_parts = [agent.system_prompt]
@@ -245,9 +245,13 @@ class AgentRunner:
 
         try:
             result_text = ""
-            async for message in Claude.query(prompt=prompt, options=options):
-                if hasattr(message, "content") and isinstance(message.content, str):
-                    result_text = message.content
+            async for message in claude_query(prompt=prompt, options=options):
+                if hasattr(message, "result") and message.result:
+                    result_text = message.result
+                elif hasattr(message, "content") and isinstance(message.content, list):
+                    for block in message.content:
+                        if hasattr(block, "text"):
+                            result_text = block.text
 
             return self._parse_sdk_response(result_text, agent.name, weight)
 

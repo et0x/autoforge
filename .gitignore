@@ -13,5 +13,8 @@ dist/
 projects/
 run.log
 
+# Secrets
+.env
+
 # Claude Code (CLAUDE.md and .claude/ are tracked for this project)
 AGENTS.md

@@ -24,11 +24,8 @@ class GitOps:
         return result.stdout.strip()
 
     def is_repo(self) -> bool:
-        try:
-            self._run("rev-parse", "--git-dir")
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return False
+        """Check if working_dir has its own .git (not just inside a parent repo)."""
+        return (self.working_dir / ".git").exists()
 
     def init(self) -> None:
         if not self.is_repo():
