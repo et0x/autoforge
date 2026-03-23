@@ -223,6 +223,66 @@ system_prompt: |
   You verify product claims using the product-db MCP server...
 ```
 
+### Objective: optimize ML training (the original autoresearch use case)
+
+For problems with a hard numeric metric, no evaluator panel is needed — autoforge runs a command, extracts the number, and compares.
+
+```bash
+# Create the project — this copies train.py and prepare.py from the template
+autoforge init ml-experiment -p ml-training
+cd ml-experiment
+
+# Download data and train tokenizer (one-time)
+uv run prepare.py
+
+# Run — the driver agent modifies train.py, trains for 5 min, extracts
+# val_bpb, and keeps changes that lower it. Runs until you stop it.
+autoforge run
+```
+
+That's it. The `ml-training` program uses objective mode:
+
+```yaml
+eval_mode: objective
+objective:
+  run_command: "uv run train.py > run.log 2>&1"
+  metric_extract: 'grep "^val_bpb:" run.log'
+  direction: minimize
+  timeout_seconds: 600
+```
+
+The driver agent gets a full Claude Code session (SDK mode) so it can read, reason about, and edit the training code. Everything in `train.py` is fair game — model architecture, optimizer hyperparameters, batch size, scheduling. `prepare.py` is read-only.
+
+Each iteration takes ~5.5 minutes (5 min training + overhead). You can leave it running overnight and wake up to a log of experiments.
+
+### Writing your own objective program
+
+Any problem where you can produce a number works. Here's a benchmark optimization example:
+
+```yaml
+# library/programs/my-benchmark.yaml (or .autoforge/programs/ for project-local)
+name: my-benchmark
+editable_files: ["solution.py"]
+read_only_files: ["problem.md"]
+eval_mode: objective
+objective:
+  run_command: "python run_benchmark.py > run.log 2>&1"
+  metric_extract: 'grep "^score:" run.log'
+  direction: maximize
+  timeout_seconds: 120
+driver_model: sonnet
+driver_mode: sdk
+driver_instructions: |
+  Optimize solution.py to maximize the benchmark score.
+  Read problem.md for the problem description.
+```
+
+Requirements:
+- **run_command** must produce output containing the metric and exit 0 on success
+- **metric_extract** must isolate the line with the number (grep, awk, etc.)
+- The default regex `[\d.]+` parses the first float it finds
+- If the command crashes or times out, the iteration is automatically discarded
+
 ## Project structure
 
 ```

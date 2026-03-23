@@ -24,25 +24,54 @@ def _built_in_library() -> Path:
 def resolve_config(kind: str, name: str, project_dir: Path | None = None) -> Path:
     """Find a YAML config file by kind (programs/agents/panels) and name.
 
-    Search order:
-      1. <project_dir>/.autoforge/<kind>/<name>.yaml
-      2. ~/.autoforge/library/<kind>/<name>.yaml
-      3. <package>/library/<kind>/<name>.yaml
+    Supports two layouts:
+      - Flat file:  <dir>/<kind>/<name>.yaml
+      - Directory:  <dir>/<kind>/<name>/program.yaml
+
+    Search order per layout:
+      1. <project_dir>/.autoforge/<kind>/
+      2. ~/.autoforge/library/<kind>/
+      3. <package>/library/<kind>/
     """
-    candidates: list[Path] = []
-
+    search_dirs: list[Path] = []
     if project_dir is not None:
-        candidates.append(project_dir / ".autoforge" / kind / f"{name}.yaml")
+        search_dirs.append(project_dir / ".autoforge" / kind)
+    search_dirs.append(Path.home() / ".autoforge" / "library" / kind)
+    search_dirs.append(_built_in_library() / kind)
 
-    candidates.append(Path.home() / ".autoforge" / "library" / kind / f"{name}.yaml")
-    candidates.append(_built_in_library() / kind / f"{name}.yaml")
-
-    for p in candidates:
-        if p.is_file():
-            return p
+    candidates: list[Path] = []
+    for d in search_dirs:
+        # Directory layout: <name>/program.yaml
+        dir_path = d / name / "program.yaml"
+        candidates.append(dir_path)
+        if dir_path.is_file():
+            return dir_path
+        # Flat layout: <name>.yaml
+        flat_path = d / f"{name}.yaml"
+        candidates.append(flat_path)
+        if flat_path.is_file():
+            return flat_path
 
     searched = "\n  ".join(str(c) for c in candidates)
     raise FileNotFoundError(f"Config '{name}' ({kind}) not found. Searched:\n  {searched}")
+
+
+def resolve_program_dir(name: str, project_dir: Path | None = None) -> Path | None:
+    """Find the directory for a program (for copying template files).
+
+    Returns the directory containing program.yaml, or None if it's a flat file.
+    """
+    search_dirs: list[Path] = []
+    if project_dir is not None:
+        search_dirs.append(project_dir / ".autoforge" / "programs")
+    search_dirs.append(Path.home() / ".autoforge" / "library" / "programs")
+    search_dirs.append(_built_in_library() / "programs")
+
+    for d in search_dirs:
+        dir_path = d / name / "program.yaml"
+        if dir_path.is_file():
+            return d / name
+    return None
 
 
 def list_configs(kind: str, project_dir: Path | None = None) -> dict[str, Path]:
@@ -56,8 +85,14 @@ def list_configs(kind: str, project_dir: Path | None = None) -> dict[str, Path]:
     found: dict[str, Path] = {}
     for d in dirs:
         if d.is_dir():
+            # Flat files: <name>.yaml
             for f in sorted(d.glob("*.yaml")):
                 name = f.stem
+                if name not in found:
+                    found[name] = f
+            # Directory layout: <name>/program.yaml
+            for f in sorted(d.glob("*/program.yaml")):
+                name = f.parent.name
                 if name not in found:
                     found[name] = f
     return found
@@ -122,7 +157,6 @@ class ProgramConfig(BaseModel):
     setup_commands: list[str] = []
 
     # Files to copy into project workspace on init
-    template_files: list[str] = []
 
     @model_validator(mode="after")
     def _check_eval_config(self) -> "ProgramConfig":

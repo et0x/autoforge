@@ -21,10 +21,6 @@ objective:
   timeout_seconds: 600
   setup_command: "test -d ~/.cache/autoforge || uv run prepare.py"
 
-template_files:
-  - "train.py"
-  - "prepare.py"
-
 driver_model: sonnet
 driver_mode: sdk
 

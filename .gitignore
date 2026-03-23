@@ -13,6 +13,5 @@ dist/
 projects/
 run.log
 
-# Claude Code
-CLAUDE.md
+# Claude Code (CLAUDE.md and .claude/ are tracked for this project)
 AGENTS.md

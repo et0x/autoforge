@@ -42,13 +42,14 @@ def init(
     directory: Optional[str] = typer.Option(None, "--dir", "-d", help="Project directory (default: ./<name>)"),
 ):
     """Initialize a new optimization project."""
-    from autoforge.config import ProgramConfig, ProjectConfig
+    import shutil
+    from autoforge.config import ProgramConfig, ProjectConfig, resolve_program_dir
 
     project_dir = Path(directory) if directory else Path.cwd() / name
     project_dir.mkdir(parents=True, exist_ok=True)
     (project_dir / ".autoforge").mkdir(exist_ok=True)
 
-    # Load program to get defaults and template files
+    # Load program to get defaults
     prog = ProgramConfig.load(program)
 
     # Create project config
@@ -59,20 +60,27 @@ def init(
     )
     project.save(project_dir)
 
-    # Copy template files from program
-    if prog.template_files:
-        import importlib.resources
-        prog_dir = Path(importlib.resources.files("autoforge")).parent.parent / "library" / "programs"  # type: ignore
-        for tmpl in prog.template_files:
-            src = prog_dir / tmpl
+    # Copy template files from the program directory (everything except program.yaml)
+    prog_dir = resolve_program_dir(program)
+    copied = []
+    if prog_dir and prog_dir.is_dir():
+        for src in sorted(prog_dir.iterdir()):
+            if src.name == "program.yaml" or src.name.startswith("."):
+                continue
+            dst = project_dir / src.name
             if src.is_file():
-                dst = project_dir / Path(tmpl).name
-                dst.write_text(src.read_text())
+                shutil.copy2(src, dst)
+                copied.append(src.name)
+            elif src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+                copied.append(f"{src.name}/")
 
     console.print(f"[green]Project '{name}' initialized at {project_dir}[/]")
     console.print(f"  Program: {program}")
     if project.panel:
         console.print(f"  Panel: {project.panel}")
+    if copied:
+        console.print(f"  Copied: {', '.join(copied)}")
     console.print(f"\n  Run [bold]cd {project_dir} && autoforge run[/] to start optimizing.")
 
 
