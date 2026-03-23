@@ -105,6 +105,11 @@ class OptimizationEngine:
                     self.ui.show_target_reached(self.state, target)
                     break
 
+            # Perfect score — nothing left to optimize
+            if self.state.best_score is not None and self._is_perfect_score():
+                self.ui.show_target_reached(self.state, self.state.best_score)
+                break
+
             self.ui.start_iteration(iteration)
 
             # 1. Driver agent proposes a change
@@ -265,6 +270,20 @@ class OptimizationEngine:
         if self.direction == "minimize":
             return score <= target
         return score >= target
+
+    def _is_perfect_score(self) -> bool:
+        """Check if the best score has hit the ceiling (panel) or floor (objective)."""
+        score = self.state.best_score
+        if score is None:
+            return False
+        if self.direction == "maximize":
+            # Panel mode: max_score from panel config (default 10.0)
+            if self.panel_evaluator:
+                return score >= self.panel_evaluator.panel.max_score
+            return False
+        else:
+            # Objective mode: 0.0 is the floor
+            return score <= 0.0
 
 
 class _EvalResult:
