@@ -1,0 +1,19 @@
+name: government-stakeholders
+description: >
+  Panel for content targeting government, defense, and national security
+  stakeholders. Emphasizes formal language, strategic framing, and
+  evidence-based reasoning with national security context.
+
+members:
+  - agent: national-security-language
+    weight: 0.25
+  - agent: formal-writing
+    weight: 0.20
+  - agent: strategic-thinking
+    weight: 0.20
+  - agent: evidence-based-reasoning
+    weight: 0.15
+  - agent: technical-accuracy
+    weight: 0.10
+  - agent: audience-engagement
+    weight: 0.10

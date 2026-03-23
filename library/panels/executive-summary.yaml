@@ -1,0 +1,16 @@
+name: executive-summary
+description: >
+  Panel for executive summaries, board presentations, and C-suite
+  communications. Prioritizes strategic framing and conciseness.
+
+members:
+  - agent: strategic-thinking
+    weight: 0.25
+  - agent: clarity-conciseness
+    weight: 0.25
+  - agent: formal-writing
+    weight: 0.20
+  - agent: evidence-based-reasoning
+    weight: 0.15
+  - agent: data-driven-analysis
+    weight: 0.15

@@ -1,0 +1,41 @@
+name: content-optimization
+description: >
+  Optimize written content (posts, memos, articles) through iterative
+  AI refinement scored by a panel of expert agents.
+version: "1.0"
+
+editable_files:
+  - "content.md"
+
+read_only_files:
+  - "brief.md"
+
+eval_mode: panel
+default_panel: linkedin-professional
+
+driver_model: sonnet
+driver_mode: api
+
+driver_instructions: |
+  You are optimizing written content. Your goal is to improve the score
+  assigned by a panel of expert evaluators.
+
+  Read brief.md for the audience, goals, and constraints.
+  Edit content.md to improve it based on the evaluation feedback.
+
+  Strategy:
+  - Focus on the weaknesses identified by the highest-weighted evaluators
+  - Preserve strengths that evaluators praised
+  - Make ONE focused change per iteration — do not rewrite everything
+  - Each change should target a specific weakness from the feedback
+  - Maintain consistent voice and tone throughout
+
+  Do NOT:
+  - Add filler or fluff just to seem more polished
+  - Remove substantive content to make things shorter
+  - Change the fundamental message or argument
+  - Ignore feedback from high-weight evaluators
+
+simplicity_criterion: true
+never_stop: false
+max_iterations: 50

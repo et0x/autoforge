@@ -1,0 +1,18 @@
+name: linkedin-professional
+description: >
+  Panel for LinkedIn posts and professional social media content.
+  Balances engagement and clarity with professional credibility.
+
+members:
+  - agent: audience-engagement
+    weight: 0.25
+  - agent: clarity-conciseness
+    weight: 0.20
+  - agent: strategic-thinking
+    weight: 0.15
+  - agent: evidence-based-reasoning
+    weight: 0.15
+  - agent: emotional-intelligence
+    weight: 0.15
+  - agent: creative-writing
+    weight: 0.10

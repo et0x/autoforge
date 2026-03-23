@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# Project state (created by autoforge init/run, per-project)
+.autoforge/
+projects/
+run.log
+
+# Claude Code
+CLAUDE.md
+AGENTS.md

@@ -1,0 +1,16 @@
+name: technical-blog
+description: >
+  Panel for technical blog posts and articles. Prioritizes technical
+  accuracy and clarity while maintaining reader engagement.
+
+members:
+  - agent: technical-accuracy
+    weight: 0.25
+  - agent: clarity-conciseness
+    weight: 0.25
+  - agent: audience-engagement
+    weight: 0.20
+  - agent: evidence-based-reasoning
+    weight: 0.15
+  - agent: creative-writing
+    weight: 0.15

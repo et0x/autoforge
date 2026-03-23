@@ -1,0 +1,52 @@
+name: ml-training
+description: >
+  Autonomous ML model optimization. Modifies training code to minimize
+  validation loss within a fixed time budget. Direct port of the original
+  autoforge program.
+version: "1.0"
+
+editable_files:
+  - "train.py"
+
+read_only_files:
+  - "prepare.py"
+
+eval_mode: objective
+objective:
+  run_command: "uv run train.py > run.log 2>&1"
+  metric_extract: 'grep "^val_bpb:" run.log'
+  metric_name: val_bpb
+  metric_regex: '[\d.]+'
+  direction: minimize
+  timeout_seconds: 600
+  setup_command: "test -d ~/.cache/autoforge || uv run prepare.py"
+
+template_files:
+  - "train.py"
+  - "prepare.py"
+
+driver_model: sonnet
+driver_mode: sdk
+
+driver_instructions: |
+  You are an autonomous ML researcher. Your goal is to minimize val_bpb
+  by modifying train.py. Everything is fair game:
+  - Model architecture (depth, width, attention heads, KV heads)
+  - Optimizer hyperparameters (learning rates, betas, weight decay)
+  - Training configuration (batch size, gradient accumulation)
+  - Scheduling (warmup, warmdown ratios)
+  - Activation functions, normalization, positional encoding
+
+  The training runs for a fixed 5-minute time budget. Since time is fixed,
+  focus on what produces the best metric, not training speed.
+
+  VRAM is a soft constraint — some increase is acceptable for meaningful
+  gains, but do not blow up dramatically.
+
+  Make ONE focused change per iteration. Document what you changed and why.
+
+simplicity_criterion: true
+never_stop: true
+
+setup_commands:
+  - "uv sync"
