@@ -44,3 +44,5 @@ Project-local `.autoforge/<kind>/` > user-global `~/.autoforge/library/<kind>/` 
 - `/driver` — driver agent prompt building, SDK vs API mode, how feedback flows
 - `/project-setup` — project init, state management, git operations, iteration history
 - `/objective-optimization` — ML training, benchmarks, or anything with a numeric metric: the run→extract→compare pipeline, crash handling, writing new objective programs
+- `/create-agent` — interactive workflow: asks questions, generates agent YAML with system prompt and rubric
+- `/create-panel` — interactive workflow: asks about audience/goals, selects agents, assigns weights, generates panel YAML
